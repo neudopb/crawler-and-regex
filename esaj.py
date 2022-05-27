@@ -1,10 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import re
-import os
 import json
 import time
-from pathlib import Path
+
 
 class Esaj:
 
@@ -65,7 +64,8 @@ class Esaj:
     def clean_data(self, text):
         text = text.replace("\n", "")
         text = text.replace("\t", "")
-        text = text.replace("<br>", "").strip()
+        text = text.replace("<br>", "")
+        text = text.replace("&nbsp;", "").strip()
         return " ".join(text.split())
 
 
@@ -108,12 +108,55 @@ class Esaj:
         
 
     def get_parts_process(self):
-        print(self.dict)
+        exp = '<tbody>(.*?)</tbody>'
+        result = re.findall(exp, self.table_parts_process, re.DOTALL)
+        print(result)
+        print(len(result))
+        result = result[0].split("</tr>")
 
+        exp_parts = '<td valign="top" .*?>.*?</td>.*?<td .*?>(.*?)<br>(.*?)</td>'
+        exp_adv = '<span .*?>.*?</span>(.*?)<br>'
+
+        list_parts = []
+
+        for process in result:
+            result_parts = re.findall(exp_parts, process, re.DOTALL)
+            if result_parts:
+                author = self.clean_data(result_parts[0][0])
+                list_attorney = []
+
+                result_attorney = re.findall(exp_adv, result_parts[0][1], re.DOTALL)
+
+                for attorney in result_attorney:
+                    list_attorney.append(self.clean_data(attorney))
+
+                elements = {
+                    "author": author,
+                    "attorney": list_attorney
+                }
+                list_parts.append(elements)
+
+        self.dict["parts_process"]["description"] = list_parts
+        
 
     def get_movements(self):
-        print(self.dict)
+        exp = '<tbody>(.*?)</tbody>'
+        result = re.findall(exp, self.table_movements, re.DOTALL)
+        result = result[0].split("</tr>")
 
+        exp_date_moviment = '<td width="120" .*?>(.*?)</td>.*?<td .*?>.*?</td>.*?<td .*?>(.*?)<br>.*?<span .*?>(.*?)</span>.*?</td>'
+        list_movements = []
+
+        for moviment in result:
+            result_date_moviment = re.findall(exp_date_moviment, moviment, re.DOTALL)
+            if result_date_moviment:
+                elements = {
+                    "date": self.clean_data(result_date_moviment[0][0]),
+                    "moviment": self.clean_data(result_date_moviment[0][1]) + " " + self.clean_data(result_date_moviment[0][2]) 
+                }
+                list_movements.append(elements)
+
+        self.dict["movements"]["description"] = list_movements
 
     def get_incidents(self):
         exp = '<td .*?>(.*)</td>'
@@ -148,6 +191,16 @@ class Esaj:
         result = re.findall(exp, self.table_audiences, re.DOTALL)
 
         self.dict["audiences"]["description"] = self.clean_data(result[0])
+
+
+    def save_data(self):
+        with open("data.json", "w") as data:
+            json.dump(self.dict, data)
+
+        with open("data.json", "r") as data:
+            json_datas = json.load(data)
+        
+        print(json_datas)
     
 
 
@@ -156,4 +209,5 @@ esaj = Esaj(webdriver)
 esaj.access()
 esaj.search_process("0033765492008", "0001")
 esaj.process_tables_html()
+# esaj.save_data()
 webdriver.quit()
