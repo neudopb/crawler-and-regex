@@ -110,8 +110,7 @@ class Esaj:
     def get_parts_process(self):
         exp = '<tbody>(.*?)</tbody>'
         result = re.findall(exp, self.table_parts_process, re.DOTALL)
-        print(result)
-        print(len(result))
+
         result = result[0].split("</tr>")
 
         exp_parts = '<td valign="top" .*?>.*?</td>.*?<td .*?>(.*?)<br>(.*?)</td>'
